@@ -17,3 +17,21 @@ core.info(`Saving bundle cache entry '${cacheKey}' using path '${archivePath}'`)
 await cache.saveCache([archivePath], cacheKey);
 
 await fs.rm(archivePath, { recursive: true });
+
+// The Actions cache service can take a moment after upload before a saved entry
+// becomes queryable. Poll until the restore lookup sees it so the action-under-test
+// doesn't race the index.
+const maxAttempts = 20;
+const delayMs = 500;
+for (let attempt = 1; ; attempt++) {
+  const found = await cache.restoreCache([archivePath], cacheKey, [], { lookupOnly: true });
+  if (found) {
+    core.info(`Cache entry '${cacheKey}' is queryable after ${attempt} attempt(s)`);
+    break;
+  }
+  if (attempt >= maxAttempts) {
+    core.setFailed(`Cache entry '${cacheKey}' was not queryable after ${maxAttempts} attempts`);
+    process.exit(1);
+  }
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
