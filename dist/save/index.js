@@ -38487,7 +38487,7 @@ module.exports = {
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
 /* harmony export */   p8: () => (/* binding */ resolvedCacheFolder)
 /* harmony export */ });
-/* unused harmony exports CACHE_FOLDER, getCacheKeyPrefix, getCacheKeyInput, getBundleSaveCacheKey, getBundleRestoreKeyPrefix */
+/* unused harmony exports CACHE_FOLDER, getCacheKeyPrefix, getCacheKeyInput, getBundleSaveCacheKey, getLegacyBundleRestoreKeyPrefix */
 /* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(3838);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(6928);
 /* harmony import */ var path__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__nccwpck_require__.n(path__WEBPACK_IMPORTED_MODULE_1__);
@@ -38502,9 +38502,12 @@ const getCacheKeyInput = () => core.getInput("cache-key", { required: true });
 
 const resolvedCacheFolder = () => path__WEBPACK_IMPORTED_MODULE_1__.resolve(CACHE_FOLDER);
 
-const getBundleSaveCacheKey = (prefix, cacheKey, runId) => `${prefix}${cacheKey}-${runId}`;
+const getBundleSaveCacheKey = (prefix, cacheKey) => `${prefix}${cacheKey}`;
 
-const getBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
+// Restore-key prefix matching caches written by versions <= 3.4.2, which embedded
+// GITHUB_RUN_ID in the save key. Lets the action keep restoring those entries
+// during the migration window; can be removed once they have aged out.
+const getLegacyBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
 
 
 /***/ }),
@@ -38527,14 +38530,31 @@ const vcpkgCachePath = (0,_helpers_js__WEBPACK_IMPORTED_MODULE_2__/* .resolvedCa
 await _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .group */ .Os("Saving vcpkg cache", async () => {
   try {
     const saveCacheKey = _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .getState */ .Gu("saveCacheKey");
+    const restoredKey = _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .getState */ .Gu("restoredKey");
 
     if (!saveCacheKey) {
       _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .warning */ .$e("No save cache key found. Skipping save.");
       return;
     }
 
+    if (restoredKey === saveCacheKey) {
+      _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Cache already present with key '${saveCacheKey}'. Skipping save.`);
+      return;
+    }
+
     _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Saving vcpkg cache with key '${saveCacheKey}'`);
-    await _actions_cache__WEBPACK_IMPORTED_MODULE_0__/* .saveCache */ .Io([vcpkgCachePath], saveCacheKey);
+    try {
+      await _actions_cache__WEBPACK_IMPORTED_MODULE_0__/* .saveCache */ .Io([vcpkgCachePath], saveCacheKey);
+    } catch (error) {
+      // GH Actions cache rejects duplicate keys with ReserveCacheError. Treat
+      // that as success -- a concurrent run on another branch won the race and
+      // the bundled content is content-addressed, so the entry is valid.
+      if (error?.name === "ReserveCacheError") {
+        _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Cache key '${saveCacheKey}' already exists (concurrent save). Skipping.`);
+        return;
+      }
+      throw error;
+    }
   } catch (error) {
     _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .setFailed */ .C1(error);
   }

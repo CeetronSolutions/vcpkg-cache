@@ -9,6 +9,9 @@ export const getCacheKeyInput = () => core.getInput("cache-key", { required: tru
 
 export const resolvedCacheFolder = () => path.resolve(CACHE_FOLDER);
 
-export const getBundleSaveCacheKey = (prefix, cacheKey, runId) => `${prefix}${cacheKey}-${runId}`;
+export const getBundleSaveCacheKey = (prefix, cacheKey) => `${prefix}${cacheKey}`;
 
-export const getBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
+// Restore-key prefix matching caches written by versions <= 3.4.2, which embedded
+// GITHUB_RUN_ID in the save key. Lets the action keep restoring those entries
+// during the migration window; can be removed once they have aged out.
+export const getLegacyBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
