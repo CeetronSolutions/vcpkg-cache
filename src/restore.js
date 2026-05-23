@@ -4,7 +4,7 @@ import {
   getCacheKeyPrefix,
   getCacheKeyInput,
   getBundleSaveCacheKey,
-  getBundleRestoreKeyPrefix,
+  getLegacyBundleRestoreKeyPrefix,
   resolvedCacheFolder,
 } from "./helpers.js";
 
@@ -16,20 +16,20 @@ core.setOutput("path", vcpkgCachePath);
 
 await core.group("Restoring vcpkg cache", async () => {
   try {
-    const runId = process.env.GITHUB_RUN_ID;
-    const saveCacheKey = getBundleSaveCacheKey(prefix, cacheKey, runId);
-    const restoreKeyPrefix = getBundleRestoreKeyPrefix(prefix, cacheKey);
+    const saveCacheKey = getBundleSaveCacheKey(prefix, cacheKey);
+    const legacyRestoreKeyPrefix = getLegacyBundleRestoreKeyPrefix(prefix, cacheKey);
 
-    core.info(`Restoring cache with key prefix '${restoreKeyPrefix}'`);
-    const restoredKey = await cache.restoreCache([vcpkgCachePath], saveCacheKey, [restoreKeyPrefix]);
+    core.info(`Restoring cache with key '${saveCacheKey}' (legacy fallback prefix '${legacyRestoreKeyPrefix}')`);
+    const restoredKey = await cache.restoreCache([vcpkgCachePath], saveCacheKey, [legacyRestoreKeyPrefix]);
 
     if (restoredKey) {
       core.info(`Cache restored from '${restoredKey}'`);
     } else {
-      core.info(`No cache found with key prefix '${restoreKeyPrefix}'`);
+      core.info(`No cache found for '${saveCacheKey}' or prefix '${legacyRestoreKeyPrefix}'`);
     }
 
     core.saveState("saveCacheKey", saveCacheKey);
+    core.saveState("restoredKey", restoredKey || "");
   } catch (error) {
     core.setFailed(error);
   }

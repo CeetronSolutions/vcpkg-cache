@@ -4,7 +4,10 @@ import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 
 const archivePath = path.resolve(process.env.ARCHIVE_PATH);
-const cacheKey = `${process.env.EXPECTED_CACHE_KEY_PREFIX}${process.env.RESTORE_RUN_ID_SEED}`;
+// Build a legacy-shaped cache key (prefix + run-id-style suffix) so the test
+// validates that the action's restore-key fallback can still pick up entries
+// written by versions <= 3.4.2.
+const cacheKey = `${process.env.LEGACY_CACHE_KEY_PREFIX}${process.env.RESTORE_RUN_ID_SEED}`;
 
 const folder = path.join(archivePath, "00");
 const file = path.join(folder, `${process.env.EXPECTED_RESTORED_ABI}.zip`);

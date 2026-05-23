@@ -38485,7 +38485,7 @@ module.exports = {
 
 "use strict";
 /* harmony export */ __nccwpck_require__.d(__webpack_exports__, {
-/* harmony export */   Kt: () => (/* binding */ getBundleRestoreKeyPrefix),
+/* harmony export */   Xv: () => (/* binding */ getLegacyBundleRestoreKeyPrefix),
 /* harmony export */   eL: () => (/* binding */ getCacheKeyInput),
 /* harmony export */   lx: () => (/* binding */ getBundleSaveCacheKey),
 /* harmony export */   p8: () => (/* binding */ resolvedCacheFolder),
@@ -38506,9 +38506,12 @@ const getCacheKeyInput = () => _actions_core__WEBPACK_IMPORTED_MODULE_0__/* .get
 
 const resolvedCacheFolder = () => path__WEBPACK_IMPORTED_MODULE_1__.resolve(CACHE_FOLDER);
 
-const getBundleSaveCacheKey = (prefix, cacheKey, runId) => `${prefix}${cacheKey}-${runId}`;
+const getBundleSaveCacheKey = (prefix, cacheKey) => `${prefix}${cacheKey}`;
 
-const getBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
+// Restore-key prefix matching caches written by versions <= 3.4.2, which embedded
+// GITHUB_RUN_ID in the save key. Lets the action keep restoring those entries
+// during the migration window; can be removed once they have aged out.
+const getLegacyBundleRestoreKeyPrefix = (prefix, cacheKey) => `${prefix}${cacheKey}-`;
 
 
 /***/ }),
@@ -38534,20 +38537,20 @@ _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .setOutput */ .uH("path", vcpkgCach
 
 await _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .group */ .Os("Restoring vcpkg cache", async () => {
   try {
-    const runId = process.env.GITHUB_RUN_ID;
-    const saveCacheKey = (0,_helpers_js__WEBPACK_IMPORTED_MODULE_2__/* .getBundleSaveCacheKey */ .lx)(prefix, cacheKey, runId);
-    const restoreKeyPrefix = (0,_helpers_js__WEBPACK_IMPORTED_MODULE_2__/* .getBundleRestoreKeyPrefix */ .Kt)(prefix, cacheKey);
+    const saveCacheKey = (0,_helpers_js__WEBPACK_IMPORTED_MODULE_2__/* .getBundleSaveCacheKey */ .lx)(prefix, cacheKey);
+    const legacyRestoreKeyPrefix = (0,_helpers_js__WEBPACK_IMPORTED_MODULE_2__/* .getLegacyBundleRestoreKeyPrefix */ .Xv)(prefix, cacheKey);
 
-    _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Restoring cache with key prefix '${restoreKeyPrefix}'`);
-    const restoredKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_0__/* .restoreCache */ .P3([vcpkgCachePath], saveCacheKey, [restoreKeyPrefix]);
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Restoring cache with key '${saveCacheKey}' (legacy fallback prefix '${legacyRestoreKeyPrefix}')`);
+    const restoredKey = await _actions_cache__WEBPACK_IMPORTED_MODULE_0__/* .restoreCache */ .P3([vcpkgCachePath], saveCacheKey, [legacyRestoreKeyPrefix]);
 
     if (restoredKey) {
       _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`Cache restored from '${restoredKey}'`);
     } else {
-      _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`No cache found with key prefix '${restoreKeyPrefix}'`);
+      _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .info */ .pq(`No cache found for '${saveCacheKey}' or prefix '${legacyRestoreKeyPrefix}'`);
     }
 
     _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .saveState */ .LZ("saveCacheKey", saveCacheKey);
+    _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .saveState */ .LZ("restoredKey", restoredKey || "");
   } catch (error) {
     _actions_core__WEBPACK_IMPORTED_MODULE_1__/* .setFailed */ .C1(error);
   }

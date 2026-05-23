@@ -20,7 +20,11 @@ jobs:
       ARCHIVE_PATH: ".vcpkg-cache"
       CACHE_KEY_PREFIX: "vcpkg/${{ matrix.runner }}/${{ github.sha }}/"
       CACHE_KEY: "bundle"
-      EXPECTED_CACHE_KEY_PREFIX: "vcpkg/${{ matrix.runner }}/${{ github.sha }}/bundle-"
+      # New, content-addressed save key (no run-id suffix).
+      EXPECTED_CACHE_KEY: "vcpkg/${{ matrix.runner }}/${{ github.sha }}/bundle"
+      # Legacy prefix used to arrange a pre-patch cache entry that the action
+      # under test should still find via its restore-key fallback.
+      LEGACY_CACHE_KEY_PREFIX: "vcpkg/${{ matrix.runner }}/${{ github.sha }}/bundle-"
       RESTORE_RUN_ID_SEED: "initial"
       EXPECTED_RESTORED_ABI: "007b2dfb916d3d63a4d185bf1d8f244abfc9c6b409d4b82c04ce9658a7b51100"
       EXPECTED_SAVED_ABI_1: "01781cc1641e10e2bcb29c0bcdc49cb5ab4de33aea24b60183359cf5385bd6a2"
@@ -78,7 +82,7 @@ jobs:
         env:
           INPUT_PREFIX: ${{ env.CACHE_KEY_PREFIX }}
           "INPUT_CACHE-KEY": ${{ env.CACHE_KEY }}
-          STATE_saveCacheKey: ${{ env.EXPECTED_CACHE_KEY_PREFIX }}${{ github.run_id }}
+          STATE_saveCacheKey: ${{ env.EXPECTED_CACHE_KEY }}
         run: node dist/save/index.js
 
       - name: Assert save

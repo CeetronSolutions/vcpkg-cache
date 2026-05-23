@@ -1,14 +1,14 @@
 import { expect, test } from "vitest";
-import { getBundleSaveCacheKey, getBundleRestoreKeyPrefix } from "../src/helpers";
+import { getBundleSaveCacheKey, getLegacyBundleRestoreKeyPrefix } from "../src/helpers";
 
-test("getBundleSaveCacheKey should return key with run ID suffix", () => {
-  const key = getBundleSaveCacheKey("vcpkg/", "abc123", "42");
+test("getBundleSaveCacheKey should return the content-addressed key without a per-run suffix", () => {
+  const key = getBundleSaveCacheKey("vcpkg/", "abc123");
 
-  expect(key).toBe("vcpkg/abc123-42");
+  expect(key).toBe("vcpkg/abc123");
 });
 
-test("getBundleRestoreKeyPrefix should return key prefix for fallback restore", () => {
-  const prefix = getBundleRestoreKeyPrefix("vcpkg/", "abc123");
+test("getLegacyBundleRestoreKeyPrefix should return the run-id-suffixed prefix for legacy caches", () => {
+  const prefix = getLegacyBundleRestoreKeyPrefix("vcpkg/", "abc123");
 
   expect(prefix).toBe("vcpkg/abc123-");
 });

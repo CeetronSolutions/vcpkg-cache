@@ -3,7 +3,7 @@ import * as core from "@actions/core";
 
 const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
 
-const expectedKey = `${process.env.EXPECTED_CACHE_KEY_PREFIX}${process.env.GITHUB_RUN_ID}`;
+const expectedKey = process.env.EXPECTED_CACHE_KEY;
 
 const {
   data: { actions_caches: cacheEntries },
