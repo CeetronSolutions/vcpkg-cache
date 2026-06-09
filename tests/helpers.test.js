@@ -1,18 +1,14 @@
 import { expect, test } from "vitest";
-import { getCacheKey, getCachePath } from "../src/helpers";
+import { getBundleSaveCacheKey, getLegacyBundleRestoreKeyPrefix } from "../src/helpers";
 
-test("getCachePath should return binary archive path", () => {
-  const cacheKey = "vcpkg/0cf4d6a517d4d8a3014b4f7e3ff721677c12f9bf443ce894521db388d8f2506b";
+test("getBundleSaveCacheKey should return the content-addressed key without a per-run suffix", () => {
+  const key = getBundleSaveCacheKey("vcpkg/", "abc123");
 
-  const path = getCachePath(cacheKey, "vcpkg/");
-
-  expect(path).toBe(".vcpkg-cache/0c/0cf4d6a517d4d8a3014b4f7e3ff721677c12f9bf443ce894521db388d8f2506b.zip");
+  expect(key).toBe("vcpkg/abc123");
 });
 
-test("getCacheKey should return key for filename", () => {
-  const filename = "0cf4d6a517d4d8a3014b4f7e3ff721677c12f9bf443ce894521db388d8f2506b.zip";
+test("getLegacyBundleRestoreKeyPrefix should return the run-id-suffixed prefix for legacy caches", () => {
+  const prefix = getLegacyBundleRestoreKeyPrefix("vcpkg/", "abc123");
 
-  const key = getCacheKey(filename, "vcpkg/");
-
-  expect(key).toBe("vcpkg/0cf4d6a517d4d8a3014b4f7e3ff721677c12f9bf443ce894521db388d8f2506b");
+  expect(prefix).toBe("vcpkg/abc123-");
 });

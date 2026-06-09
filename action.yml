@@ -5,10 +5,13 @@ branding:
   color: "yellow"
 inputs:
   token:
-    description: "GitHub workflow token"
+    description: "GitHub workflow token (no longer required, kept for backward compatibility)"
+    required: false
+  cache-key:
+    description: "Stable key identifying this cache configuration (e.g. a hash of vcpkg.json, triplet, and compiler version). All vcpkg binaries are bundled into a single cache entry per key."
     required: true
   prefix:
-    description: "Prefix added to all cache keys. Can be used for e.g. independently restoring cache entries for each vcpkg triplet."
+    description: "Prefix added to the cache key. Can be used to independently cache entries for each vcpkg triplet."
     required: false
     default: "vcpkg/"
 outputs:

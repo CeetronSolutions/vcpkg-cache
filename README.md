@@ -2,17 +2,19 @@
 
 Simple Node-based GitHub action to regain per-package caching using GitHub Actions.
 
+All vcpkg binaries are bundled into a **single cache entry** per configuration, dramatically reducing the number of GitHub Actions cache entries compared to storing one entry per binary file.
+
 ```yaml
 - uses: TAServers/vcpkg-cache@v3
   with:
-    token: ${{ secrets.GITHUB_TOKEN }}
+    cache-key: ${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
 ```
 
 Inputs:
 
-- `token`: GitHub workflow token used by `@actions/github` to get the list of cache entries for the given prefix
-- (optional) `prefix`: Prefix added to cache keys to determine which cache entries to restore. Defaults to
-  `vcpkg/`
+- `cache-key`: A stable key identifying this cache configuration. Should change when the set of dependencies or the toolchain changes (e.g. a hash of `vcpkg.json`, triplet, and compiler version). All vcpkg binaries are bundled into a single cache entry keyed by `{prefix}{cache-key}-{run-id}`, with fallback restore using the prefix `{prefix}{cache-key}-`.
+- (optional) `prefix`: Prefix added to cache keys. Defaults to `vcpkg/`. Can be used to independently cache entries for each vcpkg triplet.
+- (optional) `token`: No longer required. Kept for backward compatibility.
 
 Outputs:
 
@@ -22,14 +24,6 @@ Uses the official `@actions/cache` NPM package under the hood to ensure compatib
 
 ## Usage
 
-Add the `actions: read` permission to the workflow token:
-
-```yaml
-permissions:
-  actions: read
-  contents: read # Usually enabled by default. Needed for checkout
-```
-
 Add `TAServers/vcpkg-cache` to your workflow before you run CMake configure (or whatever triggers your `vcpkg install`):
 
 ```yaml
@@ -37,7 +31,7 @@ Add `TAServers/vcpkg-cache` to your workflow before you run CMake configure (or 
   id: vcpkg-cache
   uses: TAServers/vcpkg-cache@v3
   with:
-    token: ${{ secrets.GITHUB_TOKEN }}
+    cache-key: ${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-${{ runner.os }}-${{ env.VCPKG_TRIPLET }}
 ```
 
 Tell `vcpkg` to use the restored directory for binary caching:
@@ -49,3 +43,9 @@ Tell `vcpkg` to use the restored directory for binary caching:
     VCPKG_BINARY_SOURCES: "clear;files,${{ steps.vcpkg-cache.outputs.path }},readwrite"
   run: # Run cmake configure (or if you install vcpkg packages earlier, add the env var there
 ```
+
+## How it works
+
+On **restore**, the action looks for the most recent bundle saved under the given `cache-key` using `@actions/cache` prefix-match restore keys. If found, the entire vcpkg binary archive is restored from that bundle.
+
+On **save** (post step), the action saves the current state of the vcpkg binary archive as a new bundle entry keyed with `{prefix}{cache-key}-{run-id}`. Because GitHub Actions cache entries are immutable, each run writes a new entry that accumulates any newly compiled packages. Older entries are eventually evicted by the 10 GB cache limit.
