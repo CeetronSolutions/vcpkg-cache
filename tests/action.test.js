@@ -5,5 +5,5 @@ import { resolve } from "path";
 test("save post action only runs for successful jobs", () => {
   const actionYaml = readFileSync(resolve("action.yml"), "utf8");
 
-  expect(actionYaml).toContain('post-if: "success()"');
+  expect(actionYaml).toContain('post-if: "success() && !cancelled()"');
 });
