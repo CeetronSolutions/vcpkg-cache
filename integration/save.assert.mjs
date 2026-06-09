@@ -11,8 +11,9 @@ const expectedKey = process.env.EXPECTED_CACHE_KEY;
 const maxAttempts = 20;
 const delayMs = 500;
 
+let found = false;
 let actualCacheEntries = new Set();
-for (let attempt = 1; ; attempt++) {
+for (let attempt = 1; attempt <= maxAttempts; attempt++) {
   const {
     data: { actions_caches: cacheEntries },
   } = await octokit.rest.actions.getActionsCacheList({
@@ -24,16 +25,20 @@ for (let attempt = 1; ; attempt++) {
 
   if (actualCacheEntries.has(expectedKey)) {
     core.info(`Confirmed bundle cache entry '${expectedKey}' exists after ${attempt} attempt(s)`);
-    process.exit(0);
-  }
-
-  if (attempt >= maxAttempts) {
+    found = true;
     break;
   }
 
-  await new Promise((resolve) => setTimeout(resolve, delayMs));
+  if (attempt < maxAttempts) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
 }
 
-core.setFailed(
-  `Expected bundle cache entry '${expectedKey}' was not found after ${maxAttempts} attempts. Found: [${Array.from(actualCacheEntries).join(", ")}]`
-);
+// Don't call process.exit here: forcing exit while octokit's keep-alive socket
+// is still tearing down trips a libuv assertion on Windows (UV_HANDLE_CLOSING).
+// Let the event loop drain and signal failure via core.setFailed (exit code 1).
+if (!found) {
+  core.setFailed(
+    `Expected bundle cache entry '${expectedKey}' was not found after ${maxAttempts} attempts. Found: [${Array.from(actualCacheEntries).join(", ")}]`
+  );
+}
